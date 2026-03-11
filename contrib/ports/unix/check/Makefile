@@ -35,7 +35,12 @@ all compile: lwip_unittests
 LWIPDIR=../../../../src
 
 # The include path to sys_arch.h and lwipopts.h must be first, so this must be before Common.mk
-CFLAGS=-DLWIP_NOASSERT_ON_ERROR -I/usr/include/check -I$(LWIPDIR)/../test/unit
+#
+# NOTE (macOS/Apple Silicon): The original path here was -I/usr/include/check which is the
+# standard location on Linux. On macOS with Homebrew (especially Apple Silicon / arm64),
+# the check library is installed under /opt/homebrew instead. If you are on Linux or have
+# check installed system-wide, revert this to: -I/usr/include/check
+CFLAGS=-DLWIP_NOASSERT_ON_ERROR -I/opt/homebrew/include -I$(LWIPDIR)/../test/unit
 
 # Ignore 'too many arguments for format' warnings which happen with GCCs
 # from check 0.15.2 on fail_if/fail_unless macros with text.
@@ -45,13 +50,24 @@ CFLAGS+=-Wno-error=format-extra-args
 ifeq (clang,$(findstring clang,$(CC)))
 # check.h causes 'error: token pasting of ',' and __VA_ARGS__ is a GNU extension' with clang 9.0.0
 CFLAGS+=-Wno-gnu-zero-variadic-macro-arguments
+# The Makefile was originally written for GCC which supports warning flags such as
+# -Wlogical-op, -Wtrampolines and -Wc90-c99-compat that clang does not recognise.
+# On macOS the default compiler is Apple clang, so these cause fatal errors.
+# -Wno-unknown-warning-option suppresses them silently.
+CFLAGS+=-Wno-unknown-warning-option
+# Apple clang (17+) marks sprintf() as deprecated and treats it as a hard error.
+# This affects lwIP's PPP code (eui64.c) which is unrelated to TCP or TARR.
+# Suppressed here to keep the build clean without modifying upstream lwIP source.
+CFLAGS+=-Wno-deprecated-declarations
 endif
 
 # Prevent compiling sys_arch.c of unix port because unit test provide their own port
 SYSARCH?=
 include ../Common.mk
 
-LDFLAGS:=-lcheck -lm $(LDFLAGS)
+# NOTE (macOS/Apple Silicon): Homebrew installs libraries to /opt/homebrew/lib on arm64 Macs.
+# On Linux or Intel Mac with a system check installation, remove -L/opt/homebrew/lib.
+LDFLAGS:=-L/opt/homebrew/lib -lcheck -lm $(LDFLAGS)
 
 ifneq ($(UNAME_S),Darwin)
 # check installed via brew on Darwin doesn't have a separate subunit library (must be statically linked)

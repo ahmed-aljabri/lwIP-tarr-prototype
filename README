@@ -1,3 +1,14 @@
+TARR PROTOTYPE FORK
+-------------------
+
+This is a fork of lwIP adding implementing support for TCP ACK Rate Request (TARR) 
+based on the IETF draft: draft-ietf-tcpm-ack-rate-request. This work is part of 
+my MPhil project at the University of Cambridge.
+
+For build instructions on macOS/Apple Silicon see the "Building and Running
+Unit Tests" section below.
+
+
 INTRODUCTION
 
 lwIP is a small independent implementation of the TCP/IP protocol suite.
@@ -107,3 +118,40 @@ become familiar with the design of lwIP.
 
 Adam Dunkels <adam@sics.se>
 Leon Woestenberg <leon.woestenberg@gmx.net>
+
+
+BUILDING AND RUNNING UNIT TESTS (macOS / Apple Silicon)
+
+The unit test suite lives in contrib/ports/unix/check/ and uses the
+'check' C unit testing framework (https://libcheck.github.io/check/).
+
+The Makefile was originally written for Linux/GCC. The following one-time
+setup is required on macOS with Apple Silicon (arm64) before the tests
+will build:
+
+1. Install the check library via Homebrew:
+
+     brew install check
+
+2. The Makefile in contrib/ports/unix/check/Makefile has been patched to
+   point to the Homebrew prefix (/opt/homebrew) instead of the Linux default
+   (/usr/include/check and /usr/lib). It also suppresses three clang
+   incompatibilities:
+     - -Wno-unknown-warning-option  (GCC-only flags not recognised by clang)
+     - -Wno-gnu-zero-variadic-macro-arguments  (check.h macro syntax)
+     - -Wno-deprecated-declarations  (Apple clang marks sprintf deprecated)
+
+3. Copy the example app config (required by cmake, one-time step):
+
+     cp contrib/examples/example_app/lwipcfg.h.example \
+        contrib/examples/example_app/lwipcfg.h
+
+4. Build and run the unit tests:
+
+     cd contrib/ports/unix/check
+     make CC=clang
+     ./lwip_unittests
+
+Linux users: The original Makefile paths (/usr/include/check, no
+-L/opt/homebrew/lib) are correct for a system-installed check package.
+Revert the two path changes in the Makefile if building on Linux.
