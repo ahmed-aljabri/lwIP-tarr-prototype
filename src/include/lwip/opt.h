@@ -1500,6 +1500,16 @@
 #endif
 
 /**
+ * LWIP_TARR==1: Support the TCP ACK Rate Request (TARR) Option.
+ * Implements draft-ietf-tcpm-ack-rate-request, allowing tcp sender to request
+ * that the receiver change its ACK rate.
+ */
+#if !defined LWIP_TARR || defined __DOXYGEN__
+#define LWIP_TARR 	   0
+#endif
+
+
+/**
  * TCP_WND_UPDATE_THRESHOLD: difference in window to trigger an
  * explicit window update
  */
