@@ -266,7 +266,8 @@ struct tcp_seg {
 #define TF_SEG_DATA_CHECKSUMMED (u8_t)0x04U /* ALL data (not the header) is
                                                checksummed into 'chksum' */
 #define TF_SEG_OPTS_WND_SCALE   (u8_t)0x08U /* Include WND SCALE option (only used in SYN segments) */
-#define TF_SEG_OPTS_SACK_PERM   (u8_t)0x10U /* Include SACK Permitted option (only used in SYN segments) */
+#define TF_SEG_OPTS_SACK_PERM   (u8_t)0x10U /* Include SACK Permitted option (only used in SYN segments) */ 
+#define TF_SEG_OPTS_TARR        (u8_t)0x20U /* Include TARR option */
   struct tcp_hdr *tcphdr;  /* the TCP header */
 };
 
@@ -276,6 +277,9 @@ struct tcp_seg {
 #define LWIP_TCP_OPT_WS         3
 #define LWIP_TCP_OPT_SACK_PERM  4
 #define LWIP_TCP_OPT_TS         8
+
+#define LWIP_TCP_OPT_TARR       254         /* Experimental kind assigned for TARR that may need to be changed later */
+#define LWIP_TCP_OPT_TARR_EXID  0x00ACU
 
 #define LWIP_TCP_OPT_LEN_MSS    4
 #if LWIP_TCP_TIMESTAMPS
@@ -298,11 +302,20 @@ struct tcp_seg {
 #define LWIP_TCP_OPT_LEN_SACK_PERM_OUT 0
 #endif
 
+#if LWIP_TCP_TARR
+#define LWIP_TCP_OPT_LEN_TARR_ANNOUNCE   4 /* SYN: Kind + Len + ExID */
+#define LWIP_TCP_OPT_LEN_TARR_REQUEST    5 /* Kind + Len + ExID + R/V */
+#define LWIP_TCP_OPT_LEN_TARR_REQUEST_OUT 8 /* Padding to multiple of 4 */
+#else
+#define LWIP_TCP_OPT_LEN_TARR_REQUEST_OUT 0 
+#endif
+
 #define LWIP_TCP_OPT_LENGTH(flags) \
   ((flags) & TF_SEG_OPTS_MSS       ? LWIP_TCP_OPT_LEN_MSS           : 0) + \
   ((flags) & TF_SEG_OPTS_TS        ? LWIP_TCP_OPT_LEN_TS_OUT        : 0) + \
   ((flags) & TF_SEG_OPTS_WND_SCALE ? LWIP_TCP_OPT_LEN_WS_OUT        : 0) + \
-  ((flags) & TF_SEG_OPTS_SACK_PERM ? LWIP_TCP_OPT_LEN_SACK_PERM_OUT : 0)
+  ((flags) & TF_SEG_OPTS_SACK_PERM ? LWIP_TCP_OPT_LEN_SACK_PERM_OUT : 0) + \
+  ((flags) & TF_SEG_OPTS_TARR      ? LWIP_TCP_OPT_LEN_TARR_REQUEST_OUT : 0)
 
 /** This returns a TCP header option for MSS in an u32_t */
 #define TCP_BUILD_MSS_OPTION(mss) lwip_htonl(0x02040000 | ((mss) & 0xFFFF))
