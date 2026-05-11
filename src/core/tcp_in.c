@@ -2024,6 +2024,32 @@ tcp_parseopt(struct tcp_pcb *pcb)
           }
           break;
 #endif /* LWIP_TCP_SACK_OUT */
+#if LWIP_TCP_TARR
+        case LWIP_TCP_OPT_TARR:
+          LWIP_DEBUGF(TCP_INPUT_DEBUG, ("tcp_parseopt: TARR\n"));
+          {
+            u8_t opt_len = tcp_get_next_optbyte();
+            if ((opt_len != LWIP_TCP_OPT_LEN_TARR_ANNOUNCE &&
+                 opt_len != LWIP_TCP_OPT_LEN_TARR_REQUEST) ||
+                (tcp_optidx - 2 + opt_len) > tcphdr_optlen) {
+              LWIP_DEBUGF(TCP_INPUT_DEBUG, ("tcp_parseopt: TARR bad length\n"));
+              return;
+            }
+            u8_t exid_hi = tcp_get_next_optbyte();
+            u8_t exid_lo = tcp_get_next_optbyte();
+            u16_t exid = ((u16_t)exid_hi << 8) | exid_lo;
+            if (exid != LWIP_TCP_OPT_TARR_EXID) {
+              LWIP_DEBUGF(TCP_INPUT_DEBUG, ("tcp_parseopt: TARR bad ExID\n"));
+              return;
+            }
+            pcb->tarr_peer_capable = 1;
+            if (opt_len == LWIP_TCP_OPT_LEN_TARR_REQUEST) {
+              u8_t vr = tcp_get_next_optbyte();
+              pcb->tarr_r = (vr >> 1) & 0x7F;
+            }
+          }
+          break;
+#endif /* LWIP_TCP_TARR */
         default:
           LWIP_DEBUGF(TCP_INPUT_DEBUG, ("tcp_parseopt: other\n"));
           data = tcp_get_next_optbyte();
