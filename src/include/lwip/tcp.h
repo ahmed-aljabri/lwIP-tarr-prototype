@@ -270,6 +270,9 @@ struct tcp_pcb {
 #if LWIP_TCP_SACK_OUT
 #define TF_SACK        0x1000U /* Selective ACKs enabled */
 #endif
+#if LWIP_TCP_TARR
+#define TF_TARR_CAPABLE 0x2000U /* Advertise TARR capability on this connection */
+#endif 
 
   /* the rest of the fields are in host byte order
      as we have to do some math with them */
@@ -364,6 +367,21 @@ struct tcp_pcb {
   u32_t ts_lastacksent;
   u32_t ts_recent;
 #endif /* LWIP_TCP_TIMESTAMPS */
+
+#if LWIP_TCP_TARR
+  /* ACK ratio requested by sender. */
+  u8_t tarr_r;
+  /* ACK ratio sender desires */
+  u8_t tarr_requested_r;
+  /* Last ratio the sender requested */
+  u8_t tarr_last_sent_r;
+  /* In-order segment counter for ACK decisions */
+  u8_t tarr_seg_count;
+  /* 1 if peer has announced support for TARR option */
+  u8_t tarr_peer_capable;
+  /* 1 if we have sent capability announcement */
+  u8_t tarr_capability_sent;
+#endif
 
   /* idle time before KEEPALIVE is sent */
   u32_t keep_idle;
