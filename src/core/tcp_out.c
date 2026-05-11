@@ -1229,6 +1229,30 @@ tcp_build_wnd_scale_option(u32_t *opts)
 }
 #endif
 
+#if LWIP_TCP_TARR 
+/** Build a TCP Ack Rate Request (TARR) option
+ * @param tcp_pcb Protocol control block for the TCP connection
+ * @param opts option pointer where to store the TARR option
+ * @param capability 1 = capability announcement (4 bytes), 0 = request (5 bytes + 3 padding)
+ */
+static void
+tcp_build_tarr_option(const struct tcp_pcb *pcb, u32_t *opts, u8_t capability)
+{
+  u8_t *p = (u8_t *)opts;
+  p[0] = LWIP_TCP_OPT_TARR; /* Kind Experimental 254 */
+  p[1] = capability ? LWIP_TCP_OPT_LEN_TARR_ANNOUNCE : LWIP_TCP_OPT_LEN_TARR_REQUEST;
+  p[2] = (LWIP_TCP_OPT_TARR_EXID >> 8) & 0xFF;
+  p[3] = LWIP_TCP_OPT_TARR_EXID & 0xFF;
+  if (!capability){
+    p[4] = (pcb->tarr_requested_r & 0x7F) << 1;
+    p[5] = 0x01; p[6] = 0x01; p[7] = 0x01; /* NOP padding to 32-bit boundary */
+  }
+}
+#endif /* LWIP_TCP_TARR */
+
+
+
+
 /**
  * @ingroup tcp_raw
  * Find out what we can send and send it
@@ -1532,6 +1556,16 @@ tcp_output_segment(struct tcp_seg *seg, struct tcp_pcb *pcb, struct netif *netif
     *(opts++) = PP_HTONL(0x01010402);
   }
 #endif
+
+#if LWIP_TCP_TARR
+  if(seg->flags & TF_SEG_OPTS_TARR){
+    u8_t is_cap = !pcb->tarr_capability_sent ||
+	(lwip_ntohs(seg->tcphdr->_hdrlen_rsvd_flags) & TCP_SYN);
+    tcp_build_tarr_option(pcb, opts, is_cap);
+    opts +=2;
+  }
+#endif /* LWIP_TCP_TARR */
+
 
   /* Set retransmission timer running if it is not currently enabled
      This must be set before checking the route. */
