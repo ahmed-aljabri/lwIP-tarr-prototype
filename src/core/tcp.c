@@ -1929,6 +1929,11 @@ tcp_alloc(u8_t prio)
     pcb->keep_intvl = TCP_KEEPINTVL_DEFAULT;
     pcb->keep_cnt   = TCP_KEEPCNT_DEFAULT;
 #endif /* LWIP_TCP_KEEPALIVE */
+
+#if LWIP_TCP_TARR 
+    pcb->tarr_last_sent_r = 128; /* Force R to be emitted the first time */
+#endif /* LWIP_TCP_TARR */ 
+
     pcb_tci_init(pcb);
   }
   return pcb;
