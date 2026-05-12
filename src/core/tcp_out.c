@@ -451,7 +451,15 @@ tcp_write(struct tcp_pcb *pcb, const void *arg, u16_t len, u8_t apiflags)
   {
     optlen = LWIP_TCP_OPT_LENGTH_SEGMENT(0, pcb);
   }
-
+#if LWIP_TCP_TARR
+  if ((pcb->flags & TF_TARR_CAPABLE) && pcb->tarr_peer_capable &&
+      (pcb->tarr_requested_r != pcb->tarr_last_sent_r)) {
+    /* Piggyback a TARR request on data segments when R has changed.
+       optlen is already set above so add the option length directly. */
+    optflags |= TF_SEG_OPTS_TARR;
+    optlen += LWIP_TCP_OPT_LEN_TARR_REQUEST_OUT;
+  }
+#endif /* LWIP_TCP_TARR */
 
   /*
    * TCP segmentation is done in three phases with increasing complexity:
@@ -1074,6 +1082,15 @@ tcp_enqueue_flags(struct tcp_pcb *pcb, u8_t flags)
     optflags |= TF_SEG_OPTS_TS;
   }
 #endif /* LWIP_TCP_TIMESTAMPS */
+#if LWIP_TCP_TARR
+  if ((flags & TCP_SYN) && (pcb->flags & TF_TARR_CAPABLE)) {
+    /* On SYN-ACK (SYN_RCVD), only advertise TARR if peer announced capability first.
+       On active SYN, always advertise. */
+    if ((pcb->state != SYN_RCVD) || pcb->tarr_peer_capable) {
+      optflags |= TF_SEG_OPTS_TARR;
+    }
+  }
+#endif /* LWIP_TCP_TARR */
   optlen = LWIP_TCP_OPT_LENGTH_SEGMENT(optflags, pcb);
 
   /* Allocate pbuf with room for TCP header + options */
@@ -1562,7 +1579,12 @@ tcp_output_segment(struct tcp_seg *seg, struct tcp_pcb *pcb, struct netif *netif
     u8_t is_cap = !pcb->tarr_capability_sent ||
 	(lwip_ntohs(seg->tcphdr->_hdrlen_rsvd_flags) & TCP_SYN);
     tcp_build_tarr_option(pcb, opts, is_cap);
-    opts +=2;
+    opts += 2;
+    if (is_cap) {
+      pcb->tarr_capability_sent = 1;
+    } else {
+      pcb->tarr_last_sent_r = pcb->tarr_requested_r;
+    }
   }
 #endif /* LWIP_TCP_TARR */
 
