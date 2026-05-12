@@ -1628,6 +1628,19 @@ tcp_receive(struct tcp_pcb *pcb)
 
 
         /* Acknowledge the segment(s). */
+#if LWIP_TCP_TARR
+        if (pcb->tarr_peer_capable && pcb->tarr_r > 0) {
+          /* Peer has requested ACK every tarr_r segments; use counter instead
+             of the default every-2 delayed-ACK behaviour. */
+          pcb->tarr_seg_count++;
+          if (pcb->tarr_seg_count >= pcb->tarr_r) {
+            pcb->tarr_seg_count = 0;
+            tcp_ack_now(pcb);
+          } else {
+            tcp_set_flags(pcb, TF_ACK_DELAY);
+          }
+        } else
+#endif /* LWIP_TCP_TARR */
         tcp_ack(pcb);
 
 #if LWIP_TCP_SACK_OUT
