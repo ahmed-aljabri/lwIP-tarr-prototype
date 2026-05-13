@@ -2058,7 +2058,15 @@ tcp_parseopt(struct tcp_pcb *pcb)
             pcb->tarr_peer_capable = 1;
             if (opt_len == LWIP_TCP_OPT_LEN_TARR_REQUEST) {
               u8_t vr = tcp_get_next_optbyte();
-              pcb->tarr_r = (vr >> 1) & 0x7F;
+              u8_t requested_r = (vr >> 1) & 0x7F;
+              if (requested_r == 0) {
+                /* R=0: send an immediate ACK without changing steady-state ratio */
+                tcp_ack_now(pcb);
+              } else {
+                u8_t max_r = (u8_t)(pcb->rcv_wnd / pcb->mss);
+                if (max_r < 1) max_r = 1;
+                pcb->tarr_r = (requested_r > max_r) ? max_r : requested_r;
+              }
             }
           }
           break;
